@@ -1,2 +1,3 @@
 # progolymp
-Some problems and solutions from http://www.progolymp.se/
+Some problems from http://www.progolymp.se/ and solutions in Haskell.
+Contributions welcome!
