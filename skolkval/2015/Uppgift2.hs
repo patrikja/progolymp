@@ -1,4 +1,5 @@
 -- Kval15, Uppg. 2: Tabbtabbande
+import Lib
 
 testcases :: [((Int, [Int]), Int)]
 testcases = [ ((5, [2, 5, 4]),        4)
@@ -15,15 +16,6 @@ solution (n, ps) = sum $                   -- Räkna ut summan av
                    zip (1:ps) ps           -- för alla närliggande par av tabb-nummer.
 
 
--- | Hjälpfunktion för inmatning av lista (inte en del av just den här
--- uppgiften, men ofta användbar i dessa tävlingar).
-getList :: Read a => String -> String -> IO [a]
-getList frågaAntal frågaVarje = do
-  putStr frågaAntal
-  n <- readLn
-  sequence $ replicate n $ do
-    putStr frågaVarje
-    readLn
 
 runTests sol = all (\(inp, outp) -> sol inp == outp) testcases
 test = runTests solution
