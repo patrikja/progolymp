@@ -45,3 +45,9 @@ main = do
   putStrLn $ "Hålens djup: " ++ show d1 ++ " "
                              ++ show d2 ++ " "
                              ++ show d3
+
+{- Kommentar: Det kanske går att hitta ett "smart" sätt att lösa
+problemet, men eftersom uppgiften begränsar antalet bävrar till max 10
+blir det mindre än 1000 fall att testa vilket inte är något problem
+för körtiden.
+-}
