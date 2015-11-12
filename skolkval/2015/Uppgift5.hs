@@ -3,6 +3,7 @@
 import Data.Map
 import Prelude as P
 import Data.List
+import Lib
 
 type N = Int
 type K = Int
@@ -93,18 +94,6 @@ main = do
   sR <- frågor n "Södra raden, träd "
   svar (solution (n, k, nR, sR))
 
--- Några hjälpfunktioner för I/O
-
-fråga :: Read a => String -> IO a
-fråga text = do
-  putStr text
-  readLn
-
-frågor :: Read a => Int -> String -> IO [a]
-frågor n text = mapM (\i -> fråga (text ++ show i ++ " ? ")) [1..n]
-
-svar :: Show a => a -> IO ()
-svar x = putStrLn ("Svar: " ++ show x)
 
 
 ----------------------------------------------------------------

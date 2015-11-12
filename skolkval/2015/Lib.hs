@@ -9,3 +9,16 @@ getList frågaAntal frågaVarje = do
   sequence $ replicate n $ do
     putStr frågaVarje
     readLn
+
+-- Några hjälpfunktioner för I/O
+
+fråga :: Read a => String -> IO a
+fråga text = do
+  putStr text
+  readLn
+
+frågor :: Read a => Int -> String -> IO [a]
+frågor n text = mapM (\i -> fråga (text ++ show i ++ " ? ")) [1..n]
+
+svar :: Show a => a -> IO ()
+svar x = putStrLn ("Svar: " ++ show x)
