@@ -63,6 +63,7 @@ bäst1 n ka k p = äpplen + maximum (P.map (bäst1 n nyKarta (k-1)) grannplatser
 -- TODO: Det kan bli många onödiga sökvägar och därför ta mycket tid
 --   men för testfallen fungerar det bra.
 
+-- | Samma algoritm, men sparar också stigen.
 bäst :: Int -> Karta -> Int -> Plats -> (Äpplen, Stig)
 bäst n ka 0 p = (0, [])
 bäst n ka k p = (äpplen + restÄpplen, p:stig)
