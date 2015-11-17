@@ -14,13 +14,13 @@ Programmet ska fråga efter den krypterade strängen (högst 50 tecken, versaler
 skriva ut klartexten (den avkrypterade strängen). Strängen kommer kunna avkrypteras
 med ovan beskrivna algoritm utan att man trillar över sista bokstaven.
 
-Körningsexempel 1
-Krypterad ? ABKBFA
-Klartext: ABBA
+* Körningsexempel 1
+* Krypterad ? ABKBFA
+* Klartext: ABBA
 
-Körningsexempel 2
-Krypterad ? HZBKRYAFEAAAAJ
-Klartext: HEJ
+* Körningsexempel 2
+* Krypterad ? HZBKRYAFEAAAAJ
+* Klartext: HEJ
 
 
 ## UPPGIFT 2 – TABBTABBANDE
@@ -45,23 +45,23 @@ heltal mellan 1 och N. Det förekommer inte att man ska växla till den tabb man
 Programmet ska skriva ut ett heltal, det minsta antalet gånger tabbknappen måste
 tryckas på.
 
-Körningsexempel 1
-Antal tabbar ? 5
-Antal växlingar ? 3
-Växla till ? 2
-Växla till ? 5
-Växla till ? 4
-Svar: 4
+* Körningsexempel 1
+* Antal tabbar ? 5
+* Antal växlingar ? 3
+* Växla till ? 2
+* Växla till ? 5
+* Växla till ? 4
+* Svar: 4
 
-Körningsexempel 2
-Antal tabbar ? 9
-Antal växlingar ? 5
-Växla till ? 5
-Växla till ? 9
-Växla till ? 4
-Växla till ? 9
-Växla till ? 8
-Svar: 17
+* Körningsexempel 2
+* Antal tabbar ? 9
+* Antal växlingar ? 5
+* Växla till ? 5
+* Växla till ? 9
+* Växla till ? 4
+* Växla till ? 9
+* Växla till ? 8
+* Svar: 17
 
 ## UPPGIFT 3 – MUFFINSPELET
 Alf och Beata var två ungdomar som levde för länge, länge sedan, på tiden innan man
@@ -88,25 +88,32 @@ Poängsättning: För att få hälften av poängen måste du klara testfall där
 få full poäng måste du klara testfall där N ≤ 10 000.
 Ledning: när man delar en hög med muffins vill man alltid göra det i två högar vars
 storlekar är så lika som möjligt (se exempelförklaringarna).
+
 Fyra körningsexempel
-Antal muffins ? 1
-Svar: 0 1
+
+* Antal muffins ? 1
+* Svar: 0 1
+
 Eftersom det bara finns en muffin är den enda
 möjliga uppdelningen Alf kan göra en tom hög
 och en hög med en muffin. Beata kommer då
 äta upp högen med en muffin.
-Antal muffins ? 4
-Svar: 1 3
+
+* Antal muffins ? 4
+* Svar: 1 3
+
 Här kan Alf bara få en muffin. Den första rundan
 delar han upp muffinshögen i två högar
 med 2 muffins var. Beata äter upp 2 muffins,
 och delar sedan upp den kvarvarande högen i 2
 högar med 1 muffin var. Alf äter upp en muffin
 och måste sedan låta Beata få sista muffinen.
-Antal muffins ? 8
-Svar: 3 5
-Antal muffins ? 13
-Svar: 4 9
+
+* Antal muffins ? 8
+* Svar: 3 5
+
+* Antal muffins ? 13
+* Svar: 4 9
 
 ## UPPGIFT 4 – KANINHÅL
 I den nyss avslutade tävlingen Databävern (www.databavern.se) fick eleverna se ett
@@ -130,24 +137,26 @@ tal är mellan 1 och N, och alla är olika. Från början är ordningen N, N −
 Observera att de vandrar åt höger, så bäver 1 går först i ledet.
 Programmet ska skriva ut tre heltal mellan 1 och N − 1, djupet på det första, andra
 respektive tredje kaninhålet. Du kan förutsätta att det finns exakt en lösning.
-Körningsexempel 1
-Antal bävrar ? 5
-Nummer ? 3
-Nummer ? 4
-Nummer ? 2
-Nummer ? 1
-Nummer ? 5
-Hålens djup: 1 1 2
-Körningsexempel 2
-Antal bävrar ? 7
-Nummer ? 3
-Nummer ? 2
-Nummer ? 1
-Nummer ? 4
-Nummer ? 6
-Nummer ? 7
-Nummer ? 5
-Hålens djup: 5 4 4
+
+* Körningsexempel 1
+* Antal bävrar ? 5
+* Nummer ? 3
+* Nummer ? 4
+* Nummer ? 2
+* Nummer ? 1
+* Nummer ? 5
+* Hålens djup: 1 1 2
+
+* Körningsexempel 2
+* Antal bävrar ? 7
+* Nummer ? 3
+* Nummer ? 2
+* Nummer ? 1
+* Nummer ? 4
+* Nummer ? 6
+* Nummer ? 7
+* Nummer ? 5
+* Hålens djup: 5 4 4
 
 ## UPPGIFT 5 – PLOCKA ÄPPLEN
 OBS! Denna uppgift kan alternativt lösas via Kattis, fram till 30 november. För att räkna
@@ -165,44 +174,45 @@ fråga efter antalet äpplen på var och ett av de N träden i norra raden, och 
 efter antalet äpplen på var och ett av de N träden i södra raden, i ordning från väster
 till öster. Antalet äpplen på varje träd är mellan 0 och 1000. Programmet ska skriva ut
 antalet äpplen Olga hinner plocka.
+
 OBS! Poängsättning: För att få en poäng räcker det att klara testfall där varje träd
 har lika många äpplen. För två poäng kan det finnas olika antal äpplen på olika träd.
-Körningsexempel 1
-Antal träd per rad ? 2
-Antal hon hinner besöka ? 2
-Norra raden, träd 1 ? 7
-Norra raden, träd 2 ? 8
-Södra raden, träd 1 ? 6
-Södra raden, träd 2 ? 4
-Svar: 13
-Förklaring: Trädet Olga börjar på har
-6 äpplen. Trädet åt norr har 7 äpplen,
-medan trädet åt öster bara har 4 äpplen.
-Hon plockar därför 6 + 7 = 13 äpplen.
-Körningsexempel 2
-Antal träd per rad ? 3
-Antal hon hinner besöka ? 7
-Norra raden, träd 1 ? 5
-Norra raden, träd 2 ? 5
-Norra raden, träd 3 ? 5
-Södra raden, träd 1 ? 5
-Södra raden, träd 2 ? 5
-Södra raden, träd 3 ? 5
-Svar: 30
-Förklaring: Olga skulle hinna besöka 7 träd,
-men det finns bara 6 träd i odlingen.
-Körningsexempel 3
-Antal träd per rad ? 4
-Antal hon hinner besöka ? 6
-Norra raden, träd 1 ? 9
-Norra raden, träd 2 ? 7
-Norra raden, träd 3 ? 5
-Norra raden, träd 4 ? 11
-Södra raden, träd 1 ? 3
-Södra raden, träd 2 ? 14
-Södra raden, träd 3 ? 6
-Södra raden, träd 4 ? 8
-Svar: 48
+
+* Körningsexempel 1
+* Antal träd per rad ? 2
+* Antal hon hinner besöka ? 2
+* Norra raden, träd 1 ? 7
+* Norra raden, träd 2 ? 8
+* Södra raden, träd 1 ? 6
+* Södra raden, träd 2 ? 4
+* Svar: 13
+* Förklaring: Trädet Olga börjar på har 6 äpplen. Trädet åt norr har 7 äpplen, medan trädet åt öster bara har 4 äpplen. Hon plockar därför 6 + 7 = 13 äpplen.
+
+* Körningsexempel 2
+* Antal träd per rad ? 3
+* Antal hon hinner besöka ? 7
+* Norra raden, träd 1 ? 5
+* Norra raden, träd 2 ? 5
+* Norra raden, träd 3 ? 5
+* Södra raden, träd 1 ? 5
+* Södra raden, träd 2 ? 5
+* Södra raden, träd 3 ? 5
+* Svar: 30
+* Förklaring: Olga skulle hinna besöka 7 träd, men det finns bara 6 träd i odlingen.
+
+* Körningsexempel 3
+* Antal träd per rad ? 4
+* Antal hon hinner besöka ? 6
+* Norra raden, träd 1 ? 9
+* Norra raden, träd 2 ? 7
+* Norra raden, träd 3 ? 5
+* Norra raden, träd 4 ? 11
+* Södra raden, träd 1 ? 3
+* Södra raden, träd 2 ? 14
+* Södra raden, träd 3 ? 6
+* Södra raden, träd 4 ? 8
+* Svar: 48
+
 Förklaring: Olgas väg visas nedan.
 14
 9 11
@@ -217,12 +227,14 @@ lägg till 9. Dela svaret med 3. Addera 5. Subtrahera talet du tänkte på från
 du har kvar är 7.
 Självklart är ingen verklig tankeläsning involverad. Om vi kallar det ursprungliga talet
 för x får vi genom att utföra operationerna uttrycken
-(x) − 1 = x − 1
-(x − 1) ∗ 3 = 3x − 3
-(3x − 3) + 9 = 3x + 6
-(3x + 6) / 3 = x + 2
-(x + 2) + 5 = x + 7
-(x + 7) − x = 7
+
+  (x) − 1 = x − 1
+  (x − 1) ∗ 3 = 3x − 3
+  (3x − 3) + 9 = 3x + 6
+  (3x + 6) / 3 = x + 2
+  (x + 2) + 5 = x + 7
+  (x + 7) − x = 7
+
 Alltså kommer vi alltid få talet 7 på slutet!
 Johan vill imponera på sina kompisar genom att utföra en liknande tankeläsning. Tyvärr
 är han inte så bra på matte, så han behöver hjälp att ta reda på om hans eget
@@ -239,61 +251,65 @@ Om magitricket fungerar, d.v.s. om man alltid får samma tal i slutet oavsett va
 började med, och det talet dessutom är ett heltal, ska programmet skriva ut talet. I
 annat fall ska det skriva ut “Nej”. Observera att det enbart är sluttalet som måste vara
 ett heltal – tal som uppträder i uträkningen behöver inte vara det.
-Körningsexempel 1
-Antal operationer ? 6
-Operation ? - 1
-Operation ? * 3
-Operation ? + 9
-Operation ? / 3
-Operation ? + 5
-Operation ? - x
-Svar: 7
-Körningsexempel 2
-Antal operationer ? 6
-Operation ? - 1
-Operation ? * 3
-Operation ? + 9
-Operation ? / 2
-Operation ? + 5
-Operation ? - x
-Svar: Nej
-Fler exempel finns på nästa sida...
-7
-Programmeringsolympiaden Kvalificering 2015
-Körningsexempel 3
-Antal operationer ? 6
-Operation ? + 2
-Operation ? - x
-Operation ? * x
-Operation ? / 2
-Operation ? + 3
-Operation ? - x
-Svar: 3
-Körningsexempel 4
-Antal operationer ? 5
-Operation ? + 7
-Operation ? * x
-Operation ? * 0
-Operation ? * x
-Operation ? - 7
-Svar: -7
-Körningsexempel 5
-Antal operationer ? 1
-Operation ? * x
-Svar: Nej
-Körningsexempel 6
-Antal operationer ? 4
-Operation ? * 3
-Operation ? / 3
-Operation ? - x
-Operation ? + 5
-Svar: 5
-Körningsexempel 7
-Antal operationer ? 3
-Operation ? + 1
-Operation ? - x
-Operation ? / 2
-Svar: Nej
+
+* Körningsexempel 1
+* Antal operationer ? 6
+* Operation ? - 1
+* Operation ? * 3
+* Operation ? + 9
+* Operation ? / 3
+* Operation ? + 5
+* Operation ? - x
+* Svar: 7
+
+* Körningsexempel 2
+* Antal operationer ? 6
+* Operation ? - 1
+* Operation ? * 3
+* Operation ? + 9
+* Operation ? / 2
+* Operation ? + 5
+* Operation ? - x
+* Svar: Nej
+
+* Körningsexempel 3
+* Antal operationer ? 6
+* Operation ? + 2
+* Operation ? - x
+* Operation ? * x
+* Operation ? / 2
+* Operation ? + 3
+* Operation ? - x
+* Svar: 3
+
+* Körningsexempel 4
+* Antal operationer ? 5
+* Operation ? + 7
+* Operation ? * x
+* Operation ? * 0
+* Operation ? * x
+* Operation ? - 7
+* Svar: -7
+
+* Körningsexempel 5
+* Antal operationer ? 1
+* Operation ? * x
+* Svar: Nej
+
+* Körningsexempel 6
+* Antal operationer ? 4
+* Operation ? * 3
+* Operation ? / 3
+* Operation ? - x
+* Operation ? + 5
+* Svar: 5
+
+* Körningsexempel 7
+* Antal operationer ? 3
+* Operation ? + 1
+* Operation ? - x
+* Operation ? / 2
+* Svar: Nej
 
 ## UPPGIFT 7 – REGERING
 Väljarna i PO-land har röstat och N partier har fått plats i parlamentet, vardera med ett
