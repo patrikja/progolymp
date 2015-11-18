@@ -326,31 +326,33 @@ mandat för varje parti (alltid ett heltal). Varje parti har minst ett mandat oc
 antalet mandat överstiger inte 1000.
 Programmet ska skriva ut ett tal: antalet möjliga regeringsformationer enligt ovan. Svaret
 kommer inte att överstiga 2 miljarder.
-Körningsexempel 1
-Antal partier ? 5
-Parti 1 ? 3
-Parti 2 ? 5
-Parti 3 ? 8
-Parti 4 ? 4
-Parti 5 ? 2
-Svar: 4
+
+* Körningsexempel 1
+* Antal partier ? 5
+* Parti 1 ? 3
+* Parti 2 ? 5
+* Parti 3 ? 8
+* Parti 4 ? 4
+* Parti 5 ? 2
+* Svar: 4
 Förklaring: Regeringen måste ha
 minst 12 mandat för majoritet.
 De fyra möjliga regeringarna har:
-• 3 + 5 + 4 mandat
-• 5 + 8 mandat
-• 8 + 4 mandat
-• 3 + 8 + 2 mandat
-Körningsexempel 2
-Antal partier ? 10
-Parti 1 ? 12
-Parti 2 ? 66
-Parti 3 ? 39
-Parti 4 ? 37
-Parti 5 ? 21
-Parti 6 ? 31
-Parti 7 ? 20
-Parti 8 ? 53
-Parti 9 ? 20
-Parti 10 ? 6
-Svar: 71
+* 3 + 5 + 4 mandat
+* 5 + 8 mandat
+* 8 + 4 mandat
+* 3 + 8 + 2 mandat
+
+* Körningsexempel 2
+* Antal partier ? 10
+* Parti 1 ? 12
+* Parti 2 ? 66
+* Parti 3 ? 39
+* Parti 4 ? 37
+* Parti 5 ? 21
+* Parti 6 ? 31
+* Parti 7 ? 20
+* Parti 8 ? 53
+* Parti 9 ? 20
+* Parti 10 ? 6
+* Svar: 71

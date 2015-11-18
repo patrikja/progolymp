@@ -43,14 +43,20 @@ majoritet ms = knapptHalva + 1
     knapptHalva  = totMandat `div` 2
 
 byggTräd :: [Mandat] -> Tree ([Mandat], Sum)
-byggTräd ms = go (reverse (sort ms)) [] 0
+byggTräd ms = go (reverse (sort ms), sum ms) ([], 0)
   where
     major = majoritet ms
-    go ms     msin summa | summa >= major = Leaf (msin, summa)
-    -- Om summan är för liten
-    go []     msin summa = Fail (msin, summa)
-    go (m:ms) msin summa = Node  (go ms    msin     summa )
-                                 (go ms (m:msin) (m+summa))
+    -- Invariant: (sum ms == sumkvar) && (sum msin == summa) &&
+    --              "i förra steget var summa < major"
+    go (ms, sumkvar)     (msin, summa)    -- Om vi har en majoritet: spara den
+      | summa >= major                  = Leaf (msin, summa)
+    go (ms, sumkvar)     (msin, summa)    -- Om vi inte kan nå en majoritet, sluta
+      | summa + sumkvar < major         = Fail (msin, summa)
+    go ([],     _      ) (msin, summa)    -- Om det är slut på partier, sluta
+                                        = Fail (msin, summa)
+    go ((m:ms), sumkvar) (msin, summa)  = -- Om det är oklart, sök vidare ...
+       Node  (go  (ms, sumkvar-m)  (   msin,     summa)  ) -- utan m
+             (go  (ms, sumkvar-m)  ((m:msin), (m+summa)) ) -- med m
 
 flatten :: Tree a -> [a]
 flatten (Leaf x)   = [x]
