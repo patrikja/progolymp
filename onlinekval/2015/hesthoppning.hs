@@ -8,42 +8,34 @@
 import qualified Data.Map as Map
 import Data.Map (Map)
 
-data Ruta = Tom | Sten | Hest
+data Ruta = Tom | Sten | Hest | Besökt
   deriving (Eq, Show)
 type Rad = Int
 type Kolumn = Int
 type Pos = (Rad,Kolumn)
 type Karta = Map Pos Ruta
 
--- Det räcker att ta reda på om den första hästen kan nå den andra
--- hästen. Brädden-först-sökning av alla möjliga vägar verkar
--- lämpligt, men man bör nog hålla reda på redan besökta rutor under
--- tiden för att undvika onödiga beräkningar.
+-- Tillåtna hesthopp från en viss punkt
+hesthoppFrån :: Karta -> Pos -> [Pos]
+hesthoppFrån karta p = [p2 | p2 <- allaHestHoppFrån p, braPlats karta p2]
 
---
-kanNåsFrån karta p1 p3 = or (map (\i -> kanNåsFrånSteg karta i p1 p3) [0..n])
-  where ks = Map.keys karta
-        n  = maxRad * maxKolumn  -- en "svag" övre gräns för sökningen
-        maxRad    = maximum (map fst ks)
-        maxKolumn = maximum (map snd ks)
+braPlats karta p2 = Map.findWithDefault Sten p2 karta == Tom
 
-
-kanNåsFrånSteg karta 0 p1 p3 = p1 == p3
-kanNåsFrånSteg karta n p1 p3 = any (\p2 -> kanNåsFrånSteg karta (n-1) p2 p3) (hesthoppFrån karta p1)
-
-hesthoppFrån karta p = [p2 | p2 <- allaHestHoppFrån p, Map.findWithDefault Sten p2 karta /= Sten]
-
-allaHestHoppFrån (r,k) = map (\(a,b)->(r+a,k+b)) [(2,1),(2,-1),(1,2),(1,-2),(-1,2),(-1,-2),(-2,1),(-2,-1)]
+-- Alla åtta "hesthopp" från en viss punkt
+allaHestHoppFrån :: Pos -> [Pos]
+allaHestHoppFrån (r,k) = map (\(a,b)->(r+a,k+b)) [ ( 2,1), ( 2,-1)
+                                                 , ( 1,2), ( 1,-2)
+                                                 , (-1,2), (-1,-2)
+                                                 , (-2,1), (-2,-1)
+                                                 ]
 
 byggKarta :: [String] -> Karta
-byggKarta css = Map.fromList (concat qq)
-  where  q :: [(Rad,String)]
-         q = numrera css
-         qq :: [[(Pos,Ruta)]]
-         qq = map (\(r,cs) ->
-                      map (\(k,c) -> ((r,k),char2Ruta c))
-                          (numrera cs))
-                  q
+byggKarta css = Map.fromList (concat numreradePlatser)
+  where  numreradeRader :: [(Rad,String)]
+         numreradeRader = numrera css
+         numreradePlatser :: [[(Pos,Ruta)]]
+         numreradePlatser = map (\(r,cs) -> paraMed r (numrera cs)) numreradeRader
+         paraMed r = map (\(k, c) -> ((r, k), char2Ruta c))
 
 char2Ruta :: Char -> Ruta
 char2Ruta 'H' = Hest
@@ -51,42 +43,49 @@ char2Ruta '.' = Tom
 char2Ruta '#' = Sten
 char2Ruta c   = error ("char2Ruta: otillåtet tecken: " ++ [c])
 
-
+numrera :: [a] -> [(Int, a)]
 numrera = zip [1..]
-
 
 test1 = ["H.H","...",".#."]
 test2 = ["H#H","...",".#."]
+test3 = "H..":replicate 100 "..."++["H.."]
 
-{-
-H.H
-...
-.#.
+----------------------------------------------------------------
+-- Utgå från (en karta som visar alla platser nåbara efter n steg) och
+-- (en lista på intressanta punkter). Fyll i alla punkter som är
+-- nåbara från någon av de intressanta punkterna. Då får vi (kartan
+-- med punkter nåbara efter n+1 steg) samt (nya intressanta punkter).
 
-H.H
-..1
-.#.
+solution :: [String] -> String
+solution = jaNej . fst . leta . byggKarta
 
-H.H
-..1
-2#.
+jaNej :: Bool -> String
+jaNej b = if b then "JA" else "NEJ"
 
-H3H
-..1
-2#.
+leta :: Karta -> (Bool, (Karta, [Pos]))
+leta karta = (check resultat, resultat)
+  where resultat = head (dropWhile (not.done) (iterate steg startPar))
+        startPar = (Map.adjust (const Tom) slutPos karta, [startPos])
+        (startPos,Hest):(slutPos,Hest):_ = filter ((Hest==).snd) (Map.assocs karta)
+        done (k, ps)  = null ps || check (k, ps)
+        check (k, ps) = Map.lookup slutPos k == Just Besökt
 
-H3H
-..1
-2#4
+steg :: (Karta, [Pos]) -> (Karta, [Pos])
+steg (karta, intressant) = (nyKarta, nyaPos)
+  where nyaPos = uniq [p | rk <- intressant, p <- hesthoppFrån karta rk]
+        nyKarta = foldr (Map.adjust (const Besökt)) karta nyaPos
 
-H3H
-5.1
-2#4
+uniq :: Ord a => [a] -> [a]
+uniq (x:xs) = uniq lt ++ x:uniq gt
+  where  lt = filter (<x) xs
+         gt = filter (>x) xs
+uniq xs     = xs
 
-H36
-5.1
-2#4
-
-Klart!
-
--}
+main :: IO ()
+main = do
+  nOchM <- getLine
+  let n, m :: Int
+      (n, rest):_ = reads nOchM
+      (m, _):_    = reads rest
+  råKarta <- sequence (replicate n getLine)
+  putStrLn (solution råKarta)
