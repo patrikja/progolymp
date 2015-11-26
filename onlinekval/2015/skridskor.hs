@@ -9,17 +9,27 @@
 
 -- Output: det minsta antal svängar Natalie behöver göra för att ta sig ut från isen på höger sida.
 
+import Data.Map
+
 type Rad = Int
 type Kolumn = Int
 type Pos = (Rad, Kolumn)
 type Hinder = Bool
 type Karta = Map Pos Hinder
+data Riktning = Ö | N | V | S
+
+ettSteg :: Riktning -> Pos -> Pos
+ettSteg Ö (r, k) = (r,   k+1)
+ettSteg N (r, k) = (r+1, k  )
+ettSteg V (r, k) = (r,   k-1)
+ettSteg S (r, k) = (r-1, k  )
+
 {-
 
-Viktiga operation:
+Viktiga operationer:
 
-åk :: Karta -> Pos -> Riktning -> Maybe Pos  -- Nothing = nothing stoppnig from success!
+åk :: Karta -> Pos -> Riktning -> Maybe Pos  -- Nothing = nothing stopping from success!
 
-
+farlig :: Karta -> Pos -> Riktning -> Bool   -- kollar om en riktning är farlig (bryter mot villkoret)
 
 -}
