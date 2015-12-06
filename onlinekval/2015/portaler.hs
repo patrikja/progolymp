@@ -1,5 +1,8 @@
-import Data.Set hiding (map, filter)
+import Data.Set as Set hiding (map, filter, foldr)
 import Data.Array
+import qualified Data.Map.Strict as Map
+import Data.Map.Strict (Map)
+
 -- Portaler
 -- Problem ID: portaler Time limit: 1 second Memory limit: 1024 MB
 -- Input: heltalet N, antalet portaler. Sedan följer N rader med tal 1≤di≤N som beskriver att portalen på rad i leder till portal di. Portalerna är ett-indexerade (den lägsta har nummer 1, den högsta har nummer N), och kommer i ordning från 1 till N i indata.
@@ -12,12 +15,12 @@ testinp  = ( [2,3,4,3,4]     -- ds
            )
 testout = [1, 3, -1]
 
-byggGraf :: [Int] -> Array Int [Int]
-byggGraf ds = listArray (1,length ds) (map (:[]) ds)
+byggGraf :: [Int] -> Array Int Int
+byggGraf ds = listArray (1,length ds) ds
 
-solution :: [Int] -> [(Int, Int)] -> [Int]
-solution ds par = map (test ds) par
--- TODO: Utnyttja vi lär oss mer om grafen för varje indata (kan bli effektivare)
+solution' :: [Int] -> [(Int, Int)] -> [Int]
+solution' ds par = map (test ds) par
+-- TODO: Utnyttja att vi lär oss mer om grafen för varje indata (kan bli effektivare)
 
 -- Sök kortaste vägen i en enkel riktad graf (undvik att hamna i cykler).
 
@@ -27,7 +30,7 @@ solution ds par = map (test ds) par
 type Sökproblem a = a -> [a]
 
 bfs :: Ord a => Sökproblem a -> a -> [(Int, a)]
-bfs sp = bfs' sp empty . sing
+bfs nästa = bfs' nästa Set.empty . sing
 
 sing :: a -> [(Int, a)]
 sing x = [(0,x)]
@@ -36,16 +39,16 @@ bfs' :: (Num i, Ord a) =>
   Sökproblem a -> Set a -> [(i, a)] -> [(i, a)]
 bfs' nästa visited [] = []
 bfs' nästa visited ((level, node):lns)
-  | member node visited = bfs' nästa visited lns
+  | Set.member node visited = bfs' nästa visited lns
   | otherwise = (level, node) : bfs' nästa v' (lns ++ nexts)
       where nexts = map ((,) (level+1)) (nästa node)
-            v' = insert node visited
+            v' = Set.insert node visited
 
 type Vinst a = a -> Bool
 
 test ds (start, slut) = check (filter ((slut==) . snd) (bfs nästa start))
   where  graf = byggGraf ds
-         nästa = (graf !)
+         nästa i = [graf ! i]
 
 type Avstånd = Int
 type Nod = Int
@@ -54,6 +57,11 @@ check [] = -1
 check ((avs, _):_) = avs
 
 main = do
+  n <- readLn
+  let svar = uncurry solution (testinp2 n)
+  sequence (map print svar)
+
+main' = do
   n   <- readLn
   ds  <- sequence (replicate n readLn)
   q   <- readLn
@@ -66,3 +74,42 @@ getPair = do
   s <- getLine
   let from:to:_ = words s
   return (read from, read to)
+
+----------------------------------------------------------------
+-- Effektivare lösning - kom ihåg svaren.
+
+-- Varje gång vi räknat ut hur långt det är från a till b sparar vi svaret i en tabell:
+
+type FrånTill a = (a, a)
+type Tabell a = Map a (Map a Avstånd)
+-- Map.lookup fr t == Nothing betyder "vet inte" (än)
+-- lookup2 (fr, ti) t == Nothing betyder fr kan inte nå ti
+-- lookup2 (fr, ti) t == Just a  betyder "avståndet från fr till ti är a"
+
+lookup2 :: Ord a => (a, a) -> Tabell a -> Avstånd
+lookup2 (fr, ti) t = case Map.lookup fr t of
+                       Nothing -> -2
+                       Just t2 -> case Map.lookup ti t2 of
+                                    Nothing -> -1
+                                    Just a  -> a
+
+-- Om vi gör en vanlig bfs från start får vi en lista lns med kortaste avståendet till alla noder nåbara från start.
+-- Då kan vi fylla i en rad i tabellen med hjälp av bfs
+
+byggTabell2 :: Ord a => Sökproblem a -> [(a,a)] -> Tabell a
+byggTabell2 nästa = foldr (byggTabellSteg nästa) Map.empty
+
+byggTabellSteg :: Ord a => Sökproblem a -> (a,a) -> Tabell a -> Tabell a
+byggTabellSteg nästa (fr, ti) t = case Map.lookup fr t of
+  Just _  -> t  -- Already computed - no need to change anything
+  Nothing -> Map.insert fr (Map.fromList res) t
+          where res = map swap (bfs nästa fr)
+                swap (level, to) = (to, level)
+
+solution :: [Nod] -> [(Nod, Nod)] -> [Avstånd]
+solution ds par = map (`lookup2` tab) par
+  where  graf = byggGraf ds
+         nästa i = [graf ! i]
+         tab = byggTabell2 nästa par
+
+testinp2 n = (1:[1..n-1], zip [n,n-1..1] [1..n])
