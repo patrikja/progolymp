@@ -1,4 +1,5 @@
 import Data.List
+import Data.Array
 {-
 Klara har N bokstavstärningar. Varje tärning har en bokstav på var och en av sina 2≤K≤20 sidor. Genom att slå tärningarna och ordna dem på valfritt sätt kan man skapa ett ord med N bokstäver.
 
@@ -61,6 +62,8 @@ testa [] _  = False
 -- testa (ts:tss) []  -- ska inte ske
 testa (ts:tss) kvar = any f ts
   where f t = t `elem` kvar && testa tss (delete t kvar)
+  -- TODO: fundera på egenskaper som gör det möjligt att "gena" i sökningen.
+
 
 -- Från uppgiftstexten: tärningarna för ordet "KATT"
 t1 :: [[Tärning]]
@@ -84,12 +87,17 @@ type Ordet = [TärningsSida]
 
 solution :: Int -> [[TärningsSida]] -> [Ordet] -> [Bool]
 solution n tss ords = map kollaEttOrd ords
-  where kanGenBokstav :: Tecken -> [Tärning]  -- TODO gör till Array
-        kanGenBokstav t = [i | (i, ts) <- numrera tss, t `elem` ts]
+  where kanGenBokstavF :: Tecken -> [Tärning]
+        kanGenBokstavF t = [i | (i, ts) <- numrera tss, t `elem` ts]
+        tabell :: Array Tecken [TärningsSida]
+        tabell = listArray (0,25) (map kanGenBokstavF [0..25])
+        kanGenBokstav :: Tecken -> [Tärning]
+        kanGenBokstav t = tabell ! t
         kanGenOrd :: [Tecken] -> [[Tärning]]
         kanGenOrd = map kanGenBokstav
         kollaEttOrd ts = testa qs [1..n]
           where qs = kortaFörst (kanGenOrd ts)
 
-
 numrera = zip [1..]
+
+-- TODO: Generera några störra testfall för att se vad som tar tid.
