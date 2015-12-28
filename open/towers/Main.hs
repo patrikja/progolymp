@@ -55,6 +55,7 @@ in the "PowerTower" format.
 
 -}
 
+-- comparePT x y = compare (conv2 x) (conv2 y)
 comparePT x y = compPT (simplify x) (simplify y)
 
 -- Base cases (assuming the "1-simplification" has been done)
@@ -74,8 +75,9 @@ flipOrd EQ = EQ
 -- precondition: helper i j is only called with i < j
 helper i j is js LT = LT
 helper i j is js EQ = LT
-helper i j is js GT = compare (eval (i:is)) (eval (j:js))
+helper i j is js GT = compare (conv2 (i:is)) (conv2 (j:js))
   -- TODO: need to do some computation
+  -- fallback: compare (eval (i:is)) (eval (j:js))
 
 {-
 -- example calls:
@@ -108,26 +110,13 @@ ln j/ln i is never more than 7 but x/y is often huge
 
 so it may be useful to approximate the ratio x/y (even crudely).
 
-----------------
-
-(2^x)^y = 2^(x*y)
-
-x1 = 2log i
-y1 = 2log j
-
-2^(x1*2^(x2*2^(x3*...*2))) / 2^(y1*2^(y2*2^(y3*...*2))) =
-2^(x1*2^(x2*2^(x3*...*2)) - y1*2^(y2*2^(y3*...*2))) =
-
-2^(2log x1 + x2*2^(x3*...*2)) - 2^(2log y1 + y2*2^(y3*...*2))
-
-
 -}
 
 -- 2^100 >? 3^50
 -- 100/50 = 2 >? ln 3 / ln 2 ~= 1.6
 
 -- approximate the ratio x/y (even crudely).
--- measure size in terms of "tower height": compare to tetra 2 n
+-- measure size in terms of "tower height": compare to tetra 2 n ?
 
 height :: PowerTower -> Integer
 height []     = 0
@@ -155,14 +144,11 @@ log2 n = 1 + log2 (div n 2)
 
 ----------------------------------------------------------------
 
--- Normal form? Does not work as intended.
+-- Normal form? This try does not work as intended.
 -- 2^(x1*2^(x2*2^...) / 2^(y1*2^(y2*2^...) = 2^(x1*... - y1*...)
 
-log10D :: Integer -> Double
-log10D = (/log 10) . log . fromInteger
-
--- 2^2^2^2 / 15^2^2
-
+log10 :: Double -> Double
+log10 = (/log 10) . log
 
 -- One option:
 -- small = not . isInfinite
@@ -181,12 +167,97 @@ conv (i:is) = if length es == 1  && small de then
         e = head es
         es = conv is
 
--- then also try to rewrite into 10^10^...^x
+-- ================================================================
+-- Next try for a "normal form":
+--   rewrite each tower into 10^10^...^x
 --   with 1<x<10
--- i < 10
+-- Then comparison by lexicographical ordering of pairs
+--   (when the accuracy is good enough).
+
+type TenTower = (Int, Double) -- tower height and top exponent
+  -- Invariant: 1 <= snd < 10
+evalT :: TenTower -> Double
+evalT (sl, top) = head (drop sl (iterate (10**) top))
+
+conv2 :: PowerTower -> TenTower
+conv2 []     = (0, 1)
+conv2 (i:is) = conv2' l sl top
+  where d = fromInteger i
+        l = log10 d
+        (sl, top) = conv2 is
+
+conv2' :: Double -> Int -> Double -> TenTower
+conv2' l 0 top = adjust (1, l*top)
+conv2' l 1 top = adjust (2, log10 l + top)
+conv2' l 2 top = adjust (3, log10 (log10 l + 10**top))
+conv2' l n top = (n+1, top) -- approximately
+
+-- Assume 0.1 < top < 10^10
+-- Make sure the 1 <= result < 10
+adjust :: TenTower -> TenTower
+adjust (n, top) | top < 1  = (n-1, 10 ** top)
+                | top < 10 = (n,         top)
+                | otherwise= (n+1, log10 top)
+
+{-
+TODO: check more carefully if conv2 gives very similar results for two
+arguments. (May be accidentally ordered in the wrong way.)
+
+TODO: Perhaps get slightly better precision with smaller base (like 2)
+instead of 10.
+-}
+
+{- Solve for tt: i ^ is == evalT tt
+   without actually computing i^is (unless it is small).
+
+  i ^ is == evalT tt
+=
+  10^(log10 i * is) == evalT tt
+= let l = log10 i
+  10^(l * evalT (sl, top)) == evalT (sl', top')
+-- two cases: sl == 0 or > 0
+  10^(l * top) == evalT (sl', top')
+  -- three new cases: l*top <1, or <10 or >=10
+  -- the first two cases give
+    sl' = 0 and top' = l*top
+  -- and the third case gives
+    sl' = 1 and top' = log10 (l*top)
+-- second case: sl = slm + 1
+  10^(l * 10^evalT (slm, top)) == evalT (sl', top')
+-- let sl' = 1 + slm'
+  10^(l * 10^evalT (slm, top)) == 10 ^ evalT (slm', top')
+-- simplify
+  l * 10^evalT (slm, top) == evalT (slm', top')
+-- case: slm == 0
+    l * 10^top == evalT (slm', top')
+  -- simple renormalisation in two cases:
+    -- x=l*10^top < 10
+      slm' = 0  and  top' = x
+    -- 10 <= x < 10^10
+      slm' = 1  and  top' = log10 x
+-- case: slm == 1
+  -- We need to solve:
+    l * 10^(10^top) == 10^evalT (slm'-1, top')
+  -- take log10
+    log10 l + 10^top == evalT (slm'-1, top')
+  -- ll = log10 l = log10 (log10 i) is between -0.53 and 0.31
+  -- so 1<=top<10 will change very little to become top'
+    -- case top' < 1: set top = 10^top instead and adjust slm'
+    -- case top' > 1: (almost always): simple
+-- case slm > 1
+  -- now the correction would be negligible: a change of < 3e-11
+  thus we can approximate top' = top
+  (good, because 10^10^x is mostly out of the range of Double)
+    (max double is 1.79769e+308 = 10^10^2.49 = (2, 2.49) in our notation)
+
+-}
+
 
 exampleInputs =
-  [ "2^2^2^2^2^2^2^2^2^2^2"
+  [ "2^2^3^2^2^2^2^2^2^2^2"
+  , "3^2^2^2^2^2^2^2^2^2^2"
+  , "2^2^2^2^3^2^2^2^2^2^2"
+  , "2^2^2^2^2^2^2^2^2^2^2"
   , "3^3^3^3^3^3^3^3"
   , "4^4^4^4^4"
   , "5^5^5^5"
@@ -196,4 +267,6 @@ exampleInputs =
   , "100^100"
   ]
 
-test = map (conv . line2PowerTower) exampleInputs
+test  = map (conv . line2PowerTower) exampleInputs
+test2 = map (conv2 . line2PowerTower) exampleInputs
+test3 = sortBy comparePT (map line2PowerTower exampleInputs)
