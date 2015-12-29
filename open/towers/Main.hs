@@ -3,6 +3,7 @@
 module Main where
 import Data.List (sortBy, intersperse)
 import Data.Function (on)
+import Test.QuickCheck
 
 type PowerTower = [Integer]
 
@@ -174,30 +175,31 @@ conv (i:is) = if length es == 1  && small de then
 -- Then comparison by lexicographical ordering of pairs
 --   (when the accuracy is good enough).
 
-type TenTower = (Int, Double) -- tower height and top exponent
+type TenTower = (Int, Double, [Double]) -- tower height and top exponent
   -- Invariant: 1 <= snd < 10
 evalT :: TenTower -> Double
-evalT (sl, top) = head (drop sl (iterate (10**) top))
+evalT (sl, top, _adj) = head (drop sl (iterate (10**) top))
 
 conv2 :: PowerTower -> TenTower
-conv2 []     = (0, 1)
-conv2 (i:is) = conv2' l sl top
+conv2 []     = (0, 1, [])
+conv2 (i:is) = pow10times l (conv2 is)
   where d = fromInteger i
         l = log10 d
-        (sl, top) = conv2 is
 
-conv2' :: Double -> Int -> Double -> TenTower
-conv2' l 0 top = adjust (1, l*top)
-conv2' l 1 top = adjust (2, log10 l + top)
-conv2' l 2 top = adjust (3, log10 (log10 l + 10**top))
-conv2' l n top = (n+1, top) -- approximately
+pow10times :: Double -> TenTower -> TenTower
+pow10times l (0, top, adj) = adjust (1, l*top, l:adj)
+pow10times l (1, top, adj) = adjust (2, log10 l + top, l:adj)
+pow10times l (2, top, adj) = adjust (3, log10 (log10 l + 10**top), l:adj)
+pow10times l (n, top, adj) = (n+1, top, l:adj)
+         -- TODO: approximately, but not equal
 
 -- Assume 0.1 < top < 10^10
 -- Make sure the 1 <= result < 10
 adjust :: TenTower -> TenTower
-adjust (n, top) | top < 1  = (n-1, 10 ** top)
-                | top < 10 = (n,         top)
-                | otherwise= (n+1, log10 top)
+adjust (n, top, adj)
+  | top < 1  = (n-1, 10 ** top, adj)
+  | top < 10 = (n,         top, adj)
+  | otherwise= (n+1, log10 top, adj)
 
 {-
 TODO: check more carefully if conv2 gives very similar results for two
@@ -270,3 +272,27 @@ exampleInputs =
 test  = map (conv . line2PowerTower) exampleInputs
 test2 = map (conv2 . line2PowerTower) exampleInputs
 test3 = sortBy comparePT (map line2PowerTower exampleInputs)
+
+maxLen = 100
+maxPow = 4
+
+genPT :: Gen PowerTower
+genPT = do
+  n <- choose (1,maxLen)
+  vectorOf n (choose (2,maxPow))
+
+addOneAt :: Int -> PowerTower -> PowerTower
+addOneAt 0 (p:ps) = p+1 : ps
+addOneAt i (p:ps) = p : addOneAt (i-1) ps
+addOneAt _ []     = []
+
+prop1 = forAll genPT $ \pt ->
+          forAll (choose (0,length pt -1)) $ \i ->
+            prop1_ pt i
+
+prop1_ pt i = i < length pt ==> comparePT pt pt' == LT
+  where pt' = addOneAt i pt
+
+{-
+
+-}
