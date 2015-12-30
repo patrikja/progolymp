@@ -1,7 +1,7 @@
 -- https://open.kattis.com/problems/towers
 -- First attempt: too slow
 module Main where
-import Data.List (sortBy, intersperse)
+import Data.List (sortBy, intersperse, elemIndex)
 import Data.Function (on)
 import Test.QuickCheck
 
@@ -299,7 +299,7 @@ maxPow = 100
 genPT :: Gen PowerTower
 genPT = do
   n <- choose (1,maxLen)
-  vectorOf n (choose (2,maxPow))
+  vectorOf n (choose (1,maxPow))
 
 addOneAt :: Int -> PowerTower -> PowerTower
 addOneAt 0 (p:ps) = p+1 : ps
@@ -310,11 +310,11 @@ prop1 = forAll genPT $ \pt ->
           forAll (choose (0,length pt -1)) $ \i ->
             prop1_ pt i
 
-prop1_ pt i = i < length pt ==> comparePT pt pt' == LT
+prop1_ pt i = (cmp == LT) ||
+              (cmp == EQ && maybe (-1) id idx < i)
   where pt' = addOneAt i pt
-
-
-
+        cmp = comparePT pt pt'
+        idx = elemIndex 1 pt -- anything after a 1 changes nothing
 
 eqPairs = [ ([2,2],    [4])
           , ([3,2],    [9])
@@ -323,6 +323,7 @@ eqPairs = [ ([2,2],    [4])
           , ([2,2,2],  [16])
           , ([3,2,2],  [81])
           , ([100,50], [10,100])
+          , ([2,8,3],  [4,16,2])
           ] -- TODO more equal pairs
 
 prop2 = forAll genPT $ \pt ->
@@ -332,3 +333,103 @@ prop2 = forAll genPT $ \pt ->
 prop2_ pt (lhs, rhs) = comparePT (pt ++ lhs) (pt ++ rhs) == EQ
 
 prop3 = forAll (listOf genPT) $ \pts -> length (solution pts) >= 0
+
+----------------------------------------------------------------
+{-
+
+Exploring exact equality:
+
+When is m^x == n^y with 1<=m,n<=100 ?
+
+Case on m:
+  m == 1: then m^x == 1 for all x and n must be 1 (and y arbitrary).
+
+Otherwise, if m == n then x == y is the only solution.
+
+Otherwise m = product mps where mps is an ordered, nonempty list of primes
+and       n = product nps -- " --
+
+or equivalently m = prodexp mpes with
+
+-}
+type Prime  = Integer
+type Mult   = Integer
+type Factors = [(Prime, Mult)]
+prodexp :: Factors -> Integer
+prodexp = foldr (\(p,e) a -> p^e*a) 1
+
+{-
+
+We can represent any positive integer by a unique such list of pairs -
+there is an inverse
+
+factorise :: Integer -> Factors
+-- See https://hackage.haskell.org/package/arithmoi
+
+The "power" operation is eaily performed on the Factors: just multiply
+the multiplicities.
+
+-}
+
+power :: Factors -> Integer -> Factors
+power fs e = map (mapFst (e*)) fs
+
+mapFst :: (a->b) -> (a,c) -> (b,c)
+mapFst f (a, c) = (f a, c)
+
+{-
+
+Thanks to uniqueness of the prime factorisation, the equation
+
+  power mpes x == power npes y
+
+reduces to
+
+  forall (p,k) in mpes there must be (p,l) in npes with
+    x*k == y*l
+
+This means that
+* exactly the same prime factors appear in n and m
+* their multiplicites have to satisfy x*k == y*l
+
+Example: 2^x /= 3^y for any x,y>0
+
+Now we can start to classify solutions:
+  mpes = [(2,k)]  -- for k in [1..6] covers [2,4,8,16,32,64]
+then
+  npes = [(2,l)]
+are the only possible solutions (and we have taken care of k==l earlier).
+
+But we also need x*k == y*l.
+  For example k==1, l==2 means that x == 2*y.
+
+  We can equate the mult. of the prime factors of x and 2*y:
+    mult 2 x = 1 + mult 2 y
+  and for all p>2
+    mult p x = mult p y.
+  Now if we use that x=b^v and y=c^w we get
+    v*mult 2 b = 1 + w*mult 2 c
+  and for all p>2
+    v*mult p b = w*mult p c.
+
+  The second eq. means that (as above) the same prime factors (>2)
+  have to appear in both b and c. And if some actually appear it
+  restricts v and w severely.
+
+    In case none (>2) appear we have b=2^bm and c=2^cm and v*bm = 1 +
+    w*cm.
+
+      For example for bm=3 and cm=4 we get v*3 = 1 + w*4 with
+      solutions v=3+4q, w=2+3q for q >= 0.  To summarise, this example
+      is m=2, n=4, x=8^(3+4q), y=16^(2+3q). (So eval [2,8,3] == eval
+      [4,16,2].)
+
+    If 3 appears as a factor, say once in b and in c, then v==w which
+    requires v*bm = 1 + v*cm which means v*(bm-cm)==1 so that v==w==1
+    and bm=cm+1. So we have eval [2,2*2^cm*3,1] == eval [4,2^cm*3,1].
+     eval [2,6,1] == eval [4,3,1]
+
+Many other special cases can be found by digging further, but the
+question is: how do we compute the equality check?
+
+-}
