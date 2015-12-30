@@ -76,9 +76,14 @@ flipOrd EQ = EQ
 -- precondition: helper i j is only called with i < j
 helper i j is js LT = LT
 helper i j is js EQ = LT
-helper i j is js GT = compare (conv2 (i:is)) (conv2 (j:js))
+helper i j is js GT = compareTT (conv2 (i:is)) (conv2 (j:js))
   -- TODO: need to do some computation
   -- fallback: compare (eval (i:is)) (eval (j:js))
+
+compareTT :: TenTower -> TenTower -> Ordering
+compareTT = compare `on` fix
+  where fix (n, top, is) = (n, round12 top ,is)
+
 
 {-
 -- example calls:
@@ -88,8 +93,14 @@ helper 3  9 [4]   [2] GT
 
 -- simplifications:
 
+maxVal = 100  -- TODO: figure out how high is enough
+maxProd = 10^100  -- TODO: figure out how high is enough
+
+
 simplify (1:is) = [] -- short for 1
-simplify (p:is) = p : simplify is
+simplify (i:is) = case simplify is of
+  [j] | j <= maxVal && i^j <= maxProd  -> [i^j]
+  js                  -> i:js
 simplify [] = []
 
 ----------------
@@ -186,20 +197,29 @@ conv2 (i:is) = pow10times l (conv2 is)
   where d = fromInteger i
         l = log10 d
 
-pow10times :: Double -> TenTower -> TenTower
-pow10times l (0, top, adj) = adjust (1, l*top, l:adj)
-pow10times l (1, top, adj) = adjust (2, log10 l + top, l:adj)
-pow10times l (2, top, adj) = adjust (3, log10 (log10 l + 10**top), l:adj)
-pow10times l (n, top, adj) = (n+1, top, l:adj)
-         -- TODO: approximately, but not equal
+round12 :: Double -> Double
+round12 = round' 12
 
--- Assume 0.1 < top < 10^10
--- Make sure the 1 <= result < 10
+round' n f = (fromInteger $ round $ f * (10^n)) / (10.0^^n)
+
+add :: Double -> [Double] -> [Double]
+add d [] = [d]
+add d [x] | x' < 2     = [x']
+          | otherwise  = [d,x]
+  where x' = d + x
+
+pow10times :: Double -> TenTower -> TenTower
+pow10times l (0, top, adj) = adjust (1, l*top, add l adj)
+pow10times l (1, top, adj) = adjust (2, log10 l + top, add l adj)
+pow10times l (2, top, adj) = adjust (3, log10 (log10 l + 10**top), add l adj)
+pow10times l (n, top, adj) = (n+1, top, add l adj)
+
+-- Make sure 1 <= result < 10
 adjust :: TenTower -> TenTower
 adjust (n, top, adj)
-  | top < 1  = (n-1, 10 ** top, adj)
-  | top < 10 = (n,         top, adj)
-  | otherwise= (n+1, log10 top, adj)
+  | top < 1  = adjust (n-1, 10 ** top, adj)
+  | top < 10 =        (n,         top, adj)
+  | otherwise= adjust (n+1, log10 top, adj)
 
 {-
 TODO: check more carefully if conv2 gives very similar results for two
@@ -274,7 +294,7 @@ test2 = map (conv2 . line2PowerTower) exampleInputs
 test3 = sortBy comparePT (map line2PowerTower exampleInputs)
 
 maxLen = 100
-maxPow = 4
+maxPow = 100
 
 genPT :: Gen PowerTower
 genPT = do
@@ -293,6 +313,22 @@ prop1 = forAll genPT $ \pt ->
 prop1_ pt i = i < length pt ==> comparePT pt pt' == LT
   where pt' = addOneAt i pt
 
-{-
 
--}
+
+
+eqPairs = [ ([2,2],    [4])
+          , ([3,2],    [9])
+          , ([11,2],  [121])
+          , ([100,3], [10,6])
+          , ([2,2,2],  [16])
+          , ([3,2,2],  [81])
+          , ([100,50], [10,100])
+          ] -- TODO more equal pairs
+
+prop2 = forAll genPT $ \pt ->
+           forAll (elements eqPairs) $
+             prop2_ pt
+
+prop2_ pt (lhs, rhs) = comparePT (pt ++ lhs) (pt ++ rhs) == EQ
+
+prop3 = forAll (listOf genPT) $ \pts -> length (solution pts) >= 0
