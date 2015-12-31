@@ -1,5 +1,4 @@
 -- https://open.kattis.com/problems/towers
--- First attempt: too slow
 module Main where
 import Data.List (sortBy, intersperse, elemIndex)
 import Data.Function (on)
@@ -205,8 +204,8 @@ round' n f = (fromInteger $ round $ f * (10^n)) / (10.0^^n)
 add :: Double -> [Double] -> [Double]
 add d [] = [d]
 add d [x] | x' < 2     = [x']
-          | otherwise  = [d,x]
   where x' = d + x
+add d xs = d:xs
 
 pow10times :: Double -> TenTower -> TenTower
 pow10times l (0, top, adj) = adjust (1, l*top, add l adj)
@@ -332,6 +331,7 @@ prop2 = forAll genPT $ \pt ->
 
 prop2_ pt (lhs, rhs) = comparePT (pt ++ lhs) (pt ++ rhs) == EQ
 
+-- Just check for crashes
 prop3 = forAll (listOf genPT) $ \pts -> length (solution pts) >= 0
 
 ----------------------------------------------------------------
