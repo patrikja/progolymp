@@ -155,9 +155,6 @@ log2 n = 1 + log2 (div n 2)
 
 ----------------------------------------------------------------
 
--- Normal form? This try does not work as intended.
--- 2^(x1*2^(x2*2^...) / 2^(y1*2^(y2*2^...) = 2^(x1*... - y1*...)
-
 log10 :: Double -> Double
 log10 = (/log 10) . log
 
@@ -201,11 +198,16 @@ round12 = round' 12
 
 round' n f = (fromInteger $ round $ f * (10^n)) / (10.0^^n)
 
+-- TODO: improve this "ad-hoc" list
 add :: Double -> [Double] -> [Double]
 add d [] = [d]
-add d [x] | x' < 2     = [x']
-  where x' = d + x
+add d [x] | x' <= 100 = [x']
+  where x' = 10**x * d
 add d xs = d:xs
+-- assume d = log10 a
+--    and x = log10 b
+-- we need log10 (a^b) = b*log10 a = b*d = 10**x*d
+
 
 pow10times :: Double -> TenTower -> TenTower
 pow10times l (0, top, adj) = adjust (1, l*top, add l adj)
@@ -322,10 +324,12 @@ eqPairs = [ ([2,2],    [4])
           , ([2,2,2],  [16])
           , ([3,2,2],  [81])
           , ([100,50], [10,100])
+          , ([49,49],  [7,98])
           , ([2,8,3],  [4,16,2])
+          , ([2,8,7],  [4,16,5])
           ] -- TODO more equal pairs
 
-prop2 = forAll genPT $ \pt ->
+prop2 = forAllShrink genPT shPT $ \pt ->
            forAll (elements eqPairs) $
              prop2_ pt
 
@@ -422,7 +426,7 @@ But we also need x*k == y*l.
       For example for bm=3 and cm=4 we get v*3 = 1 + w*4 with
       solutions v=3+4q, w=2+3q for q >= 0.  To summarise, this example
       is m=2, n=4, x=8^(3+4q), y=16^(2+3q). (So eval [2,8,3] == eval
-      [4,16,2].)
+      [4,16,2]. But also [2,8,7] ~= [4,16,5] osv.)
 
     If 3 appears as a factor, say once in b and in c, then v==w which
     requires v*bm = 1 + v*cm which means v*(bm-cm)==1 so that v==w==1
@@ -431,5 +435,31 @@ But we also need x*k == y*l.
 
 Many other special cases can be found by digging further, but the
 question is: how do we compute the equality check?
+
+-}
+
+shPT [] = []
+shPT xs = [init xs]
+
+-- Trying to find new equal pair by "provoking quickCheck"
+prop4 = forAllShrink (vectorOf 5 (choose (1,100))) shPT $ \is ->
+        forAllShrink (vectorOf 5 (choose (1,100))) shPT $ \js ->
+        simplify is /= simplify js ==> comparePT is js /= EQ
+
+test4 =  quickCheckWith stdArgs { maxSuccess = 5000 } prop4
+
+----------------------------------------------------------------
+{-
+
+TODO: develop better comparison test to catch these cases:
+
+λ> quickCheck prop2
+*** Failed! Falsifiable (after 1 test and 8 shrinks):
+[]
+([2,8,3],[4,16,2])
+λ> quickCheck prop2
+*** Failed! Falsifiable (after 14 tests and 8 shrinks):
+[]
+([2,8,7],[4,16,5])
 
 -}
