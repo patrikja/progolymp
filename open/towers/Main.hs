@@ -1,6 +1,6 @@
 -- https://open.kattis.com/problems/towers
 module Main where
-import Data.List (sortBy, intersperse, elemIndex)
+import Data.List (sortBy, intersperse, elemIndex, sort, groupBy)
 import Data.Function (on)
 import Test.QuickCheck
 
@@ -327,6 +327,7 @@ eqPairs = [ ([2,2],    [4])
           , ([49,49],  [7,98])
           , ([2,8,3],  [4,16,2])
           , ([2,8,7],  [4,16,5])
+          , ([2,8,99], [4,16,74])
           ] -- TODO more equal pairs
 
 prop2 = forAllShrink genPT shPT $ \pt ->
@@ -461,5 +462,208 @@ TODO: develop better comparison test to catch these cases:
 *** Failed! Falsifiable (after 14 tests and 8 shrinks):
 []
 ([2,8,7],[4,16,5])
+
+-}
+smallPrimes  = [2,3,5,7]
+startFactors = zip smallPrimes (repeat 0)
+-- For numbers 1 <= n <= 100
+factorise :: Integer -> Factors
+factorise n | n < 1      = error "factorise: only positive integers allowed"
+            | n > maxVal = error ("factorise: only numbers <= "++ show maxVal ++ " allowed")
+            | otherwise  = reverse (goFactors startFactors n [])
+
+goFactors []         1 fs = fs
+goFactors []         n fs = (n,1):fs  -- n is prime
+goFactors ((p,m):ps) n fs = if mod == 0 then goFactors ((p,m+1):ps) n' fs
+                          else goFactors ps n $
+                               if m == 0 then fs else ((p,m):fs)
+  where (n', mod) = divMod n p
+
+primeFactors :: Factors -> [Integer]
+primeFactors = map fst
+
+groupsWithSamePrimeFactors =
+  map (\ps@((l,_):_) -> (l, map snd ps)) $
+  groupBy ((==) `on` fst) $
+  sort $
+  map (\n -> (primeFactors (factorise n), n)) [1..100]
+
+haveSamePrimeFactors :: Integer -> Integer -> Bool
+haveSamePrimeFactors = (==) `on` (primeFactors . factorise)
+
+{-
+[([],[1]),
+([2],     [2,4,8,16,32,64]),
+([2,3],   [6,12,18,24,36,48,54,72,96]),
+([2,3,5], [30,60,90]),
+([2,3,7], [42,84]),
+([2,5],   [10,20,40,50,80,100]),
+([2,7],   [14,28,56,98]),
+([2,11],  [22,44,88]),
+([2,13],  [26,52]),
+([2,17],  [34,68]),
+([2,19],  [38,76]),
+([2,23],  [46,92]),
+([3],     [3,9,27,81]),
+([3,5],   [15,45,75]),
+([3,7],   [21,63]),
+([3,11],  [33,99]),
+([5],     [5,25]),
+([7],     [7,49]),
+
+([11],    [11]),
+([13],    [13]),
+([17],    [17]),
+([19],    [19]),
+([2,29],  [58]),
+([2,3,11],[66]),
+([2,3,13],[78]),
+([2,31],  [62]),
+([2,37],  [74]),
+([2,41],  [82]),
+([2,43],  [86]),
+([2,47],  [94]),
+([2,5,7], [70]),
+([23],    [23]),
+([29],    [29]),
+([3,13],  [39]),
+([3,17],  [51]),
+([3,19],  [57]),
+([3,23],  [69]),
+([3,29],  [87]),
+([3,31],  [93]),
+([31],    [31]),
+([37],    [37]),
+([41],    [41]),
+([43],    [43]),
+([47],    [47]),
+([5,11],  [55]),
+([5,13],  [65]),
+([5,17],  [85]),
+([5,19],  [95]),
+([5,7],   [35]),
+([53],    [53]),
+([59],    [59]),
+([61],    [61]),
+([67],    [67]),
+([7,11],  [77]),
+([7,13],  [91]),
+([71],    [71]),
+([73],    [73]),
+([79],    [79]),
+([83],    [83]),
+([89],    [89]),
+([97],    [97])]
+-}
+
+eqPT []      []      = True
+eqPT (i:is)  []      = False
+eqPT []      (j:js)  = False
+eqPT (i:is)  (j:js)  =  (i==j && eqPT is js)
+                     || (primeFactors ifs == primeFactors jfs
+                         && eqF (ifs, is) (jfs, js))
+  where ifs = factorise i
+        jfs = factorise j
+
+-- Now we have two towers starting with two numbers with the same
+-- prime factors but different multiplicities. These are equal only if
+-- the prime factors match up exactly. Example:
+--   eqF ([(2,1),(3,2)], is) ([(2,2),(3,1)], js)
+-- iff
+--   (eval is == 2*eval js) && (2*eval is == eval js)
+
+eqF :: (Factors, PowerTower) -> (Factors, PowerTower) -> Bool
+eqF (ifs, is) (jfs, js) = all (\(fi, fj) -> eqPert (fi, is) (fj, js)) fs
+  where fs = zip (map snd ifs) (map snd jfs)
+             -- keep only the multiplicities
+
+-- Thus we need a helper function to check equality perturbed by some
+-- (small) factors (fi and fj).
+-- Specification:  (fi*eval is == fj*eval js)
+eqPert :: (Integer, PowerTower) -> (Integer, PowerTower) -> Bool
+eqPert (fi, is) (fj, js) = (primeFactors lhs == primeFactors rhs)
+                        && error "TBD"
+  where fifs = factorise fi
+        fjfs = factorise fj
+        ifs  = if null is then [] else factorise (head is)
+        jfs  = if null js then [] else factorise (head js)
+        lhs  = fifs -*- ifs
+        rhs  = fjfs -*- jfs
+
+-- eqPert is a generalisation of eqPT (which is obtained with fi==fj==1)
+
+-- multiplication of Factors (is union of two bags of primes)
+(-*-) :: Factors -> Factors -> Factors
+(-*-) = unionWith (+)
+-- division is similar
+(-/-) :: Factors -> Factors -> Factors
+(-/-) = unionWith (-)
+(-^)  = power     -- Factor ^ Integer
+(-=-) :: Factors -> Factors -> Bool
+xs -=- ys = all ((0==).snd) (xs -/- ys)
+
+unionWith :: Ord p => (m -> m -> m) -> [(p, m)] -> [(p, m)] -> [(p, m)]
+unionWith (+) = go
+  where
+    go [] fs = fs
+    go fs [] = fs
+    go ((p1,m1):fs1) ((p2,m2):fs2) = case compare p1 p2 of
+      LT -> (p1,m1   ) : go          fs1 ((p2,m2):fs2)
+      EQ -> (p1,m1+m2) : go          fs1          fs2
+      GT -> (p2,   m2) : go ((p1,m1):fs1)         fs2
+
+
+-- --------------
+{-
+
+The case is=[] is boring, is=i:is is more interesting
+
+  fi*eval (i:is)
+=
+  prodexp (factors fi) * prodexp (factors (eval (i:is)))
+=
+  prodexp (factors fi -*- factors (eval (i:is)))
+=
+  prodexp (factors fi -*- (factors i -^ eval is))
+-- similarly
+  prodexp (factors fj -*- (factors j -^ eval js))
+=
+  fj*eval (j:js)
+
+----
+
+  fi*eval (i:is) == fj*eval (j:js)
+=
+  prodexp (factors fi -*- (factors i -^ eval is)) ==
+  prodexp (factors fj -*- (factors j -^ eval js))
+=
+  factors fi -*- (factors i -^ eval is)  -=-
+  factors fj -*- (factors j -^ eval js)
+= let x = eval is; y = eval js
+  factors fi -*- (factors i -^ x)  -=-
+  factors fj -*- (factors j -^ y)
+=
+  all ((0==).snd) ((factors fi -*- (factors i -^ x)) -/-
+                   (factors fj -*- (factors j -^ y))    )
+-}
+
+
+
+
+{-
+  factors (eval is)
+-- by case is
+
+  factors (eval [])
+==
+  factors 1
+==
+  []
+
+  factors (eval (i:is))
+==
+  factors (i^eval is)
+==
+  factors i -^ eval is
 
 -}
