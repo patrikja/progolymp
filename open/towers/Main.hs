@@ -480,7 +480,7 @@ goFactors ((p,m):ps) n fs = if mod == 0 then goFactors ((p,m+1):ps) n' fs
   where (n', mod) = divMod n p
 
 primeFactors :: Factors -> [Integer]
-primeFactors = map fst
+primeFactors = map fst . filter ((0/=).snd)
 
 groupsWithSamePrimeFactors =
   map (\ps@((l,_):_) -> (l, map snd ps)) $
@@ -575,42 +575,97 @@ eqPT (i:is)  (j:js)  =  (i==j && eqPT is js)
 eqF :: (Factors, PowerTower) -> (Factors, PowerTower) -> Bool
 eqF (ifs, is) (jfs, js) = all (\(fi, fj) -> eqPert (fi, is) (fj, js)) fs
   where fs = zip (map snd ifs) (map snd jfs)
-             -- keep only the multiplicities
+             -- keep only the multiplicities (assuming the primes are the same)
 
 -- Thus we need a helper function to check equality perturbed by some
 -- (small) factors (fi and fj).
 -- Specification:  (fi*eval is == fj*eval js)
 eqPert :: (Integer, PowerTower) -> (Integer, PowerTower) -> Bool
-eqPert (fi, is) (fj, js) = (primeFactors lhs == primeFactors rhs)
-                        && error "TBD"
+eqPert (0,  is)   (fj, js)   = 0 == fj
+eqPert (fi, is)   (0,  js)   = 0 == fi
+eqPert (fi, [])   (fj, js)   = eqAssym (factorise fi -/- factorise fj) js
+eqPert (fi, is)   (fj, [])   = eqAssym (factorise fj -/- factorise fi) is
+eqPert (fi, i:is) (fj, j:js) = (primeFactors lhs == primeFactors rhs)
+                            && eqFPert fifs (ifs,is) fjfs (jfs,js)
   where fifs = factorise fi
         fjfs = factorise fj
-        ifs  = if null is then [] else factorise (head is)
-        jfs  = if null js then [] else factorise (head js)
+        ifs  = factorise i
+        jfs  = factorise j
         lhs  = fifs -*- ifs
         rhs  = fjfs -*- jfs
 
 -- eqPert is a generalisation of eqPT (which is obtained with fi==fj==1)
 
+eqFPert :: Factors -> (Factors, PowerTower) -> Factors -> (Factors, PowerTower) -> Bool
+eqFPert fifs (ifs, is) fjfs (jfs, js) =
+    all (\((mfi, mi),(mfj,mj)) -> eqPert2 (mi, is) (mfj-mfi) (mj, js)) fs
+  where
+    fs = zipF4 fifs ifs fjfs jfs
+    -- for each prime factor, check mfi + mi*I == mfj + mj*J
+    --                              mi*I == (mfj-mfi) + mj*J
+    --                       where I = eval is
+    --                       where J = eval js
+
+-- check that i*eval is == m + j*eval js
+-- Note that eqPert2 is a generalisation of eqPert (which is the special case m = 0)
+eqPert2 :: (Integer, PowerTower) -> Integer -> (Integer, PowerTower) -> Bool
+eqPert2 (i,is) 0 (j,js) = eqPert (i, is) (j, js)
+eqPert2 (0,is) m (j,js) = m < 0 && eqAssym (factorise (negate m) -/- factorise j) js
+eqPert2 (i,is) m (0,js) = m > 0 && eqAssym (factorise m -/- factorise i) is
+eqPert2 (i,is) m (j,js) = error ("eqPert2 " ++ show (i,is) ++ " " ++ show m ++ " " ++ show (j,js))
+
+{- TODO:
+λ> eqPT [2,8,3] [4,16,2]
+*** Exception: eqPert2 (3,[3]) 1 (4,[2])
+-}
+
+
+-- check that prodexp xs == eval is
+eqAssym :: Factors -> PowerTower -> Bool
+eqAssym xs []      =  xs -=- []
+eqAssym xs (i:is)  =  all nonNegMul xs
+                   && (primeFactors xs == primeFactors ifs)
+                   && all (\(mx, mi) -> eqAssym (factorise mx -/- factorise mi) is)
+                          (zip (map snd xs) (map snd ifs))
+  where ifs = factorise i
+
+nonNegMul :: (Prime, Mult) -> Bool
+nonNegMul (_p, m) = 0 <= m
+
+zipF4 :: Factors -> Factors -> Factors -> Factors -> [((Mult,Mult),(Mult,Mult))]
+zipF4 as bs cs ds = map (\p -> ((am p, bm p), (cm p, dm p))) combinedPrimes
+  where combinedPrimes = merge (merge aps bps) (merge cps dps)
+        [aps, bps, cps, dps] = map (map fst) [as, bs, cs, ds]
+        [am,  bm,  cm,  dm ] = map (\xs-> \p-> maybe 0 id (lookup p xs)) [as, bs, cs, ds]
+
+merge xs [] = xs
+merge [] ys = ys
+merge (x:xs) (y:ys) | x <= y     = x:merge xs (y:ys)
+                    | otherwise  = y:merge (x:xs) ys
+
 -- multiplication of Factors (is union of two bags of primes)
 (-*-) :: Factors -> Factors -> Factors
-(-*-) = unionWith (+)
+(-*-) = unionWith (0/=) (+)
 -- division is similar
 (-/-) :: Factors -> Factors -> Factors
-(-/-) = unionWith (-)
+(-/-) = unionWith (0/=) (-)
 (-^)  = power     -- Factor ^ Integer
 (-=-) :: Factors -> Factors -> Bool
 xs -=- ys = all ((0==).snd) (xs -/- ys)
 
-unionWith :: Ord p => (m -> m -> m) -> [(p, m)] -> [(p, m)] -> [(p, m)]
-unionWith (+) = go
+unionWith :: Ord p => (m -> Bool) -> (m -> m -> m) ->
+                      [(p, m)] -> [(p, m)] -> [(p, m)]
+unionWith nonZ (+) = go
   where
     go [] fs = fs
     go fs [] = fs
     go ((p1,m1):fs1) ((p2,m2):fs2) = case compare p1 p2 of
-      LT -> (p1,m1   ) : go          fs1 ((p2,m2):fs2)
-      EQ -> (p1,m1+m2) : go          fs1          fs2
-      GT -> (p2,   m2) : go ((p1,m1):fs1)         fs2
+      LT ->   (p1,m1   ) : go          fs1 ((p2,m2):fs2)
+      EQ -> if nonZ (m1+m2) then
+              (p1,m1+m2) : go          fs1          fs2
+            else
+                           go          fs1          fs2
+      GT ->   (p2,   m2) : go ((p1,m1):fs1)         fs2
 
 
 -- --------------
