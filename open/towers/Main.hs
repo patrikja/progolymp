@@ -59,6 +59,8 @@ in the "PowerTower" format.
 comparePT x y = compPT (simplify x) (simplify y)
 
 -- Base cases (assuming the "1-simplification" has been done)
+compPT is      js      | eqPT is js
+                       = EQ
 compPT (i:is)  []      = GT
 compPT []      (j:js)  = LT
 compPT []      []      = EQ
@@ -440,7 +442,12 @@ question is: how do we compute the equality check?
 -}
 
 shPT [] = []
-shPT xs = [init xs]
+shPT xs = init xs :
+             map (:tail xs)  (shPos (head xs))
+          ++ map (head xs :) (shPT (tail xs))
+
+shPos n = map (1+) (shrink (n-1))
+
 
 -- Trying to find new equal pair by "provoking quickCheck"
 prop4 = forAllShrink (vectorOf 5 (choose (1,100))) shPT $ \is ->
@@ -449,6 +456,12 @@ prop4 = forAllShrink (vectorOf 5 (choose (1,100))) shPT $ \is ->
 
 test4 =  quickCheckWith stdArgs { maxSuccess = 5000 } prop4
 
+testeqPT = quickCheck (\(Positive n) (Positive m) -> (n <= 10) ==> (m <= 50) ==> eqPT [n,2*m] [n^2,m])
+
+prop5 = forAllShrink genPT shPT $ \is ->
+          forAllShrink genPT shPT $ \js ->
+            prop5_ is js
+prop5_ is js = eqPT is js == (comparePT is js == EQ)
 ----------------------------------------------------------------
 {-
 
@@ -464,12 +477,13 @@ TODO: develop better comparison test to catch these cases:
 ([2,8,7],[4,16,5])
 
 -}
-smallPrimes  = [2,3,5,7]
+smallPrimes  = [2,3,5,7,11]
 startFactors = zip smallPrimes (repeat 0)
--- For numbers 1 <= n <= 100
+maxFact = 13^2-1
+-- For numbers 1 <= n < 13^2
 factorise :: Integer -> Factors
 factorise n | n < 1      = error "factorise: only positive integers allowed"
-            | n > maxVal = error ("factorise: only numbers <= "++ show maxVal ++ " allowed")
+--            | n > maxFact= error ("factorise: only numbers <= "++ show maxFact ++ " allowed")
             | otherwise  = reverse (goFactors startFactors n [])
 
 goFactors []         1 fs = fs
@@ -609,16 +623,39 @@ eqFPert fifs (ifs, is) fjfs (jfs, js) =
 -- check that i*eval is == m + j*eval js
 -- Note that eqPert2 is a generalisation of eqPert (which is the special case m = 0)
 eqPert2 :: (Integer, PowerTower) -> Integer -> (Integer, PowerTower) -> Bool
-eqPert2 (i,is) 0 (j,js) = eqPert (i, is) (j, js)
-eqPert2 (0,is) m (j,js) = m < 0 && eqAssym (factorise (negate m) -/- factorise j) js
-eqPert2 (i,is) m (0,js) = m > 0 && eqAssym (factorise m -/- factorise i) is
-eqPert2 (i,is) m (j,js) = error ("eqPert2 " ++ show (i,is) ++ " " ++ show m ++ " " ++ show (j,js))
+eqPert2 (a,is) m (b,js) | length (simplify is) <= 1 && length (simplify js) <= 1
+                        = a*eval is == m + b*eval js
+eqPert2 (a,is) 0 (b,js) = eqPert (a, is) (b, js)
+eqPert2 (0,is) m (b,js) = m < 0 && eqAssym (factorise (negate m) -/- factorise b) js
+eqPert2 (a,is) m (0,js) = m > 0 && eqAssym (factorise m -/- factorise a) is
+eqPert2 (a,is) m (b,js) | null (simplify is)
+                        = (a - m) > 0 && eqAssym (factorise (a-m) -/- factorise b) js
+eqPert2 (a,is) m (b,js) | null (simplify js)
+                        = (m + b) > 0 && eqAssym (factorise (m+b) -/- factorise a) is
+eqPert2 (a,is) m (b,js) = error ("eqPert2 " ++ show (a,is) ++ " " ++ show m ++ " " ++ show (b,js))
 
-{- TODO:
-λ> eqPT [2,8,3] [4,16,2]
-*** Exception: eqPert2 (3,[3]) 1 (4,[2])
+-- TODO: complete the last case
+{-
+λ> findProblemseqPert2
+*** Failed! Exception: 'eqPert2 (1,[2]) 1 (1,[2,2,7])' (after 4 tests and 169 shrinks):
+Positive {getPositive = 1}
+1
+Positive {getPositive = 1}
+[2]
+[2,2,7]
+
 -}
 
+findProblemseqPert2 =
+  quickCheck (\(Positive a) m (Positive j) ->
+              forAllShrink genPT shPT $ \is ->
+                forAllShrink genPT shPT $ \js ->
+                  eqPert2 (a,is) m (j,js) `seq` True)
+
+findProblemseqPT =
+  quickCheck (forAllShrink genPT shPT $ \is ->
+                forAllShrink genPT shPT $ \js ->
+                  eqPT is js `seq` True)
 
 -- check that prodexp xs == eval is
 eqAssym :: Factors -> PowerTower -> Bool
