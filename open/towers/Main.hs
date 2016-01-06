@@ -155,6 +155,12 @@ log2 3 = 1
 log2 4 = 2
 log2 n = 1 + log2 (div n 2)
 
+-- log2 rounded up
+log2up :: Integer -> Integer
+log2up 1 = 0
+log2up n | even n     = 1 + log2up (    div n 2)
+         | otherwise  = 1 + log2up (1 + div n 2)
+
 ----------------------------------------------------------------
 
 log10 :: Double -> Double
@@ -477,7 +483,36 @@ TODO: develop better comparison test to catch these cases:
 ([2,8,7],[4,16,5])
 
 -}
-smallPrimes  = [2,3,5,7,11]
+-- start of borrowing from https://wiki.haskell.org/Prime_numbers
+_Y   :: (t -> t) -> t
+_Y g = g (_Y g)                -- multistage, non-sharing, recursive
+       -- g x where x = g x    -- two stages, sharing, corecursive
+primesW = [2,3,5,7] ++ _Y ( (11:) . tail  . gapsW 11 wheel . joinT .
+                            map (\p->
+                              map (p*) . dropWhile (< p) $
+                                scanl (+) (p - rem (p-11) 210) wheel) )
+
+gapsW k (d:w) s@(c:cs) | k < c     = k : gapsW (k+d) w s    -- set difference
+                       | otherwise =     gapsW (k+d) w cs   --   k==c
+hitsW k (d:w) s@(p:ps) | k < p     =     hitsW (k+d) w s    -- intersection
+                       | otherwise = scanl (\c d->c+p*d) (p*p) (d:w)
+                                       : hitsW (k+d) w ps   --   k==p
+wheel = 2:4:2:4:6:2:6:4:2:4:6:6:2:6:4:2:6:4:6:8:4:2:4:2:
+        4:8:6:4:6:2:4:6:2:6:6:4:2:4:6:2:6:4:2:4:2:10:2:10:wheel
+-- joinL ((x:xs):t) = x : union xs (joinL t)
+joinT ((x:xs):t) = x : union xs (joinT (pairs t))    -- set union, ~=
+  where  pairs (xs:ys:t) = union xs ys : pairs t     --    nub.sort.concat
+
+union (x:xs) (y:ys) = case (compare x y) of
+           LT -> x : union  xs  (y:ys)
+           EQ -> x : union  xs     ys
+           GT -> y : union (x:xs)  ys
+union  xs     []    = xs
+union  []     ys    = ys
+-- End of borrowing
+
+smallPrimes  = primesW
+               -- [2,3,5,7,11]
 startFactors = zip smallPrimes (repeat 0)
 maxFact = 13^2-1
 -- For numbers 1 <= n < 13^2
@@ -632,6 +667,12 @@ eqPert2 (a,is) m (b,js) | null (simplify is)
                         = (a - m) > 0 && eqAssym (factorise (a-m) -/- factorise b) js
 eqPert2 (a,is) m (b,js) | null (simplify js)
                         = (m + b) > 0 && eqAssym (factorise (m+b) -/- factorise a) is
+eqPert2 (a,is) m (b,js) | length sis <= 1 && length sjs > 1
+                        = lhs > 0 && eqAssym (factorise lhs -/- factorise b) js
+  where sis = simplify is
+        x   = eval sis     -- a*x == m + b*eval js
+        lhs = a*x-m  -- Note that factorise may be called with large factors in lhs
+        sjs = simplify js  -- (a*x - m) == b*eval js
 eqPert2 (a,is) m (b,js) = error ("eqPert2 " ++ show (a,is) ++ " " ++ show m ++ " " ++ show (b,js))
 
 -- TODO: complete the last case
@@ -757,5 +798,84 @@ The case is=[] is boring, is=i:is is more interesting
   factors (i^eval is)
 ==
   factors i -^ eval is
+
+-}
+
+-- ================================================================
+
+{-
+2016-01-06: Time to look for inequalities.
+
+  eqPert2 (1,[2]) 1 (1,[12,93])
+=
+  1*eval [2] == 1 + 1*eval [12,93]
+=
+  2 == 1 + 12^93
+=
+  False
+
+But not only are lhs/=rhs, they are not even close!
+
+if we keep the invariant that the PowerTower sent to eval only
+contains numbers > 1 then we can make some approximations very easily.
+
+eval [] = 1 < 2 < 2^x <= i^x = eval (i:is)
+
+-}
+
+tetra :: (Eq a, Num a, Integral b) => b -> a -> b
+tetra b 0 = 1
+tetra b n = b^tetra b (n-1)
+
+-- Don't try this on big PowerTowers!
+prop_eval :: PowerTower -> Bool
+prop_eval is = tetra 2 (length is) <= eval is
+
+{-
+Base case: is == []
+  tetra 2 (length []) = tetra 2 0 = 1 = eval []
+Step case:
+  assume (tetra 2 (length is) <= eval is)
+
+  tetra 2 (length (i:is))
+=
+  tetra 2 (1+length is)
+=
+  2^tetra 2 (length is)
+<= -- induction hypothesis and monotonicity of (2^)
+  2^eval is
+<=
+  i^eval is
+=
+  eval (i:is)
+-}
+
+{-
+If we know the tower is non-empty we get a better result:
+
+  eval (i:is) = i^eval is <= i^tetra 2 (length is)
+
+----
+
+Now we can get back to the check
+
+  1*eval [2] == 1 + 1*eval [12,93]
+
+the lhs is small, so evaluated completely to 2
+the rhs >= 1 + 12^tetra 2 (length [93]) = 1 + 12^2 = 145
+
+Thus lhs can't possible be equal to rhs.
+
+This "assymetric" approximation will take care of many cases.
+
+TODO: Step 1: implemented this for eqPert2
+TODO: Step 2: generalise from equality to ordering
+
+Step 1:
+  first we need to be careful with evaluating tetra: it will also be too large for length is > 4
+  For lhs < 65536 it is enough to cut the tetra evaluation at length around 4.
+
+(We need to be careful not to approximate in "the wrong direction":
+the rhs is made smaller and the lhs is made bigger.)
 
 -}
