@@ -523,10 +523,11 @@ factorise n | n < 1      = error "factorise: only positive integers allowed"
 
 goFactors []         1 fs = fs
 goFactors []         n fs = (n,1):fs  -- n is prime
-goFactors ((p,m):ps) n fs = if mod == 0 then goFactors ((p,m+1):ps) n' fs
-                          else goFactors ps n $
+goFactors ((p,m):ps) n fs = if mod == 0 then goFactors ((p,m+1):ps') n' fs
+                            else goFactors ps' n $
                                if m == 0 then fs else ((p,m):fs)
   where (n', mod) = divMod n p
+        ps' = if p^2 > n then [] else ps
 
 primeFactors :: Factors -> [Integer]
 primeFactors = map fst . filter ((0/=).snd)
@@ -673,18 +674,23 @@ eqPert2 (a,is) m (b,js) | length sis <= 1 && length sjs > 1
         x   = eval sis     -- a*x == m + b*eval js
         lhs = a*x-m  -- Note that factorise may be called with large factors in lhs
         sjs = simplify js  -- (a*x - m) == b*eval js
+eqPert2 (a,is) m (b,js) | length sjs <= 1 && length sis > 1
+                        = rhs > 0 && eqAssym (factorise rhs -/- factorise a) is
+  where sis = simplify is
+        y   = eval sjs     -- a*eval is == m + b*y
+        rhs = m + b*y  -- Note that factorise may be called with large factors in rhs
+        sjs = simplify js
 eqPert2 (a,is) m (b,js) = error ("eqPert2 " ++ show (a,is) ++ " " ++ show m ++ " " ++ show (b,js))
 
--- TODO: complete the last case
+-- TODO: complete the last case (and find performance bugs)
 {-
 λ> findProblemseqPert2
-*** Failed! Exception: 'eqPert2 (1,[2]) 1 (1,[2,2,7])' (after 4 tests and 169 shrinks):
+*** Failed! Exception: 'eqPert2 (1,[2,2,7]) 1 (1,[2,11,2])' (after 2 tests and 99 shrinks):
 Positive {getPositive = 1}
 1
 Positive {getPositive = 1}
-[2]
 [2,2,7]
-
+[2,11,2]
 -}
 
 findProblemseqPert2 =
