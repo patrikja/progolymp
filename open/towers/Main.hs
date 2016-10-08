@@ -511,6 +511,7 @@ union  xs     []    = xs
 union  []     ys    = ys
 -- End of borrowing
 
+-- Originally I only used small primes
 smallPrimes  = primesW
                -- [2,3,5,7,11]
 startFactors = zip smallPrimes (repeat 0)
@@ -672,17 +673,18 @@ eqPert2 (a,is) m (b,js) | length sis <= 1 && length sjs > 1
                         = lhs > 0 && eqAssym (factorise lhs -/- factorise b) js
   where sis = simplify is
         x   = eval sis     -- a*x == m + b*eval js
-        lhs = a*x-m  -- Note that factorise may be called with large factors in lhs
+        lhs = a*x-m  -- TODO: Note that factorise may be called with large factors in lhs
         sjs = simplify js  -- (a*x - m) == b*eval js
 eqPert2 (a,is) m (b,js) | length sjs <= 1 && length sis > 1
                         = rhs > 0 && eqAssym (factorise rhs -/- factorise a) is
   where sis = simplify is
         y   = eval sjs     -- a*eval is == m + b*y
-        rhs = m + b*y  -- Note that factorise may be called with large factors in rhs
+        rhs = m + b*y  -- TODO: Note that factorise may be called with large factors in rhs
         sjs = simplify js
 eqPert2 (a,is) m (b,js) = error ("eqPert2 " ++ show (a,is) ++ " " ++ show m ++ " " ++ show (b,js))
 
--- TODO: complete the last case (and find performance bugs)
+-- TODO: complete the last case
+-- TODO: find performance bugs (finding big primes is too costly - don't call factorise unless factors are known to be small)
 {-
 λ> findProblemseqPert2
 *** Failed! Exception: 'eqPert2 (1,[2,2,7]) 1 (1,[2,11,2])' (after 2 tests and 99 shrinks):
@@ -691,6 +693,10 @@ Positive {getPositive = 1}
 Positive {getPositive = 1}
 [2,2,7]
 [2,11,2]
+
+-- other examples:
+eqPert2 (1,[21,88]) 1 (1,[99,99])
+
 -}
 
 findProblemseqPert2 =
